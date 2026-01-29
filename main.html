@@ -156,18 +156,7 @@ th{
 
     </style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<!--<Скрипт закрытия клавиатуры>--> 
-<script>
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const el = document.activeElement;
-    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-      el.blur(); // закрывает клавиатуру
-      e.preventDefault(); // чтобы форма не сабмитилась
-    }
-  }
-});
-</script>
+
 
 <script>
   function applyTgTheme() {
@@ -195,6 +184,20 @@ document.addEventListener('keydown', e => {
   }
 </script>
 </head>
+
+<!--<Скрипт закрытия клавиатуры>--> 
+<script>
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const el = document.activeElement;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+      el.blur(); // закрывает клавиатуру
+      e.preventDefault(); // чтобы форма не сабмитилась
+    }
+  }
+});
+</script>
+
 <body>
     <h1>Расчёт перемешивающего аппарата по РД 26-01-90-85</h1>
     <p>ψ₁ — ближайшее значение от E<br>B и K₁ — по ψ₁ (без перегородок)<br>При перегородках: v_cp → θ → K₁(θ)</p>
