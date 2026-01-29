@@ -144,8 +144,11 @@ th{
   h1{ font-size: 16px; }
   input, select, textarea{ padding: 12px; }
 }
+
+input, select, textarea{
+  font-size: 16px !important;
+}
     </style>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
   function applyTgTheme() {
@@ -172,8 +175,6 @@ th{
     tg.onEvent('themeChanged', applyTgTheme);
   }
 </script>
-
-
 </head>
 <body>
     <h1>Расчёт перемешивающего аппарата по РД 26-01-90-85</h1>
