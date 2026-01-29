@@ -17,7 +17,22 @@
         .warning { color: red; font-weight: bold; }
         .error { border: 2px solid red !important; background: #ffecec !important; }
         small { color: #666; font-size: 0.9em; }
+        body { background: var(--tg-bg, #000); color: var(--tg-text, #fff); }
+        label, h1, p { color: var(--tg-text, #fff) !important; }
+        small { color: var(--tg-hint, #aaa) !important; }
     </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+
+    document.documentElement.style.setProperty('--tg-bg', tg.themeParams.bg_color || '#000');
+    document.documentElement.style.setProperty('--tg-text', tg.themeParams.text_color || '#fff');
+    document.documentElement.style.setProperty('--tg-hint', tg.themeParams.hint_color || '#aaa');
+  }
+</script>
 </head>
 <body>
     <h1>Расчёт перемешивающего аппарата по РД 26-01-90-85</h1>

@@ -4,19 +4,6 @@
     <meta charset="utf-8" />
     <meta http-equiv="refresh" content="0; url=./main.html" />
     <title>Redirect</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-  const tg = window.Telegram?.WebApp;
-
-  if (tg) {
-    tg.ready();                 // говорит телеге “я загрузился”
-    tg.expand();                // разворачивает на максимум
-    tg.enableClosingConfirmation(); // спросит подтверждение при закрытии (по желанию)
-
-    // можно подтянуть тему телеги:
-    document.documentElement.style.background = tg.themeParams.bg_color || "#fff";
-  }
-</script>
   </head>
   <body>
     <a href="./main.html">Open</a>
