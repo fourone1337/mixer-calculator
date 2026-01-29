@@ -156,6 +156,19 @@ th{
 
     </style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!--<Скрипт закрытия клавиатуры>--> 
+<script>
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const el = document.activeElement;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+      el.blur(); // закрывает клавиатуру
+      e.preventDefault(); // чтобы форма не сабмитилась
+    }
+  }
+});
+</script>
+
 <script>
   function applyTgTheme() {
     const tg = window.Telegram?.WebApp;
