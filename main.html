@@ -5,31 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Расчёт по РД 26-01-90-85 (B по черт.25 от ψ₁)</title>
     <style>
-       :root { color-scheme: light dark; } /* помогает системным контролам */
+       :root { color-scheme: light dark; }
 
-body{
-  font-family: Arial, sans-serif;
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 16px;
-
-  background: var(--tg-bg);
-  color: var(--tg-text);
+html, body {
+  height: 100%;
 }
 
-/* Заголовки/текст */
-h1, h2, p, label { color: var(--tg-text); }
-small { color: var(--tg-hint); }
+body{
+  margin: 0;
+  padding: calc(12px + env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom));
+  background: var(--tg-bg);
+  color: var(--tg-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 
-/* Форма */
-form { display: grid; gap: 10px; }
+  /* убираем "сайт-центровку" */
+  max-width: none;
+}
+
+h1{
+  font-size: 18px;
+  margin: 6px 0 10px;
+}
+
+p{ margin: 6px 0 10px; color: var(--tg-hint); }
+
+form{
+  display: grid;
+  gap: 10px;
+}
 
 label{
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--tg-text);
   margin-top: 6px;
 }
 
-/* Поля ввода / селекты */
+small{
+  color: var(--tg-hint);
+  font-size: 12px;
+}
+
+/* Поля как в Telegram */
 input, select, textarea{
   width: 100%;
   box-sizing: border-box;
@@ -37,11 +54,19 @@ input, select, textarea{
   padding: 12px 12px;
   border-radius: 12px;
 
-  border: 1px solid rgba(127,127,127,0.25);
-  background: var(--tg-secondary-bg);
-  color: var(--tg-text);
+  background: var(--tg-secondary-bg) !important;
+  color: var(--tg-text) !important;
 
+  border: 1px solid rgba(127,127,127,0.22);
   outline: none;
+
+  /* важно для iOS/Android WebView */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+select{
+  padding-right: 36px;
 }
 
 input::placeholder, textarea::placeholder{
@@ -53,8 +78,9 @@ input:focus, select:focus, textarea:focus{
   border-color: rgba(127,127,127,0.45);
 }
 
-/* Кнопка — как Telegram */
+/* Кнопка под Telegram */
 button{
+  width: 100%;
   padding: 12px 14px;
   border-radius: 12px;
 
@@ -64,24 +90,19 @@ button{
   background: var(--tg-button);
   color: var(--tg-button-text);
   font-weight: 700;
+  font-size: 15px;
 }
 
-button:hover{ filter: brightness(0.98); }
-button:active{ transform: translateY(1px); }
-
-/* Результаты */
+/* Карточка результата */
 #result{
-  margin-top: 16px;
-  padding: 14px;
-
+  margin-top: 14px;
+  padding: 12px;
   background: var(--tg-secondary-bg);
-  border: 1px solid rgba(127,127,127,0.18);
   border-radius: 14px;
-
   color: var(--tg-text);
 }
 
-/* Таблица */
+/* Таблица более "тележная" */
 table{
   width: 100%;
   border-collapse: collapse;
@@ -91,40 +112,45 @@ table{
 }
 
 th, td{
-  border: 1px solid rgba(127,127,127,0.18);
   padding: 10px;
-  text-align: left;
+  border-bottom: 1px solid rgba(127,127,127,0.18);
   color: var(--tg-text);
+  font-size: 13px;
 }
 
 th{
-  background: rgba(127,127,127,0.10);
+  color: var(--tg-hint);
+  font-weight: 600;
+  background: transparent;
 }
 
-/* Предупреждения */
-.warning{ color: #ff3b30; font-weight: 800; } /* iOS/Telegram red */
-.error{ border: 2px solid #ff3b30 !important; background: rgba(255,59,48,0.08) !important; }
+/* Предупреждения/ошибки */
+.warning{ color: #ff3b30; font-weight: 700; }
+.error{
+  border: 2px solid #ff3b30 !important;
+  background: rgba(255,59,48,0.08) !important;
+}
 
-/* Блок перегородок */
+/* Блок перегородок тоже в стиле карточки */
 #bafflesParams{
   background: var(--tg-secondary-bg) !important;
-  border-color: rgba(127,127,127,0.25) !important;
-  color: var(--tg-text);
+  border: 1px dashed rgba(127,127,127,0.35) !important;
+  border-radius: 14px !important;
+  padding: 12px !important;
 }
 
-/* Мобилка: чуть компактнее */
-@media (max-width: 520px){
-  body{ padding: 12px; }
-  input, select, textarea{ padding: 12px; border-radius: 12px; }
+/* На очень узких экранах */
+@media (max-width: 420px){
+  h1{ font-size: 16px; }
+  input, select, textarea{ padding: 12px; }
 }
-
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.ready();
-    tg.expand();
+  function applyTgTheme() {
+    const tg = window.Telegram?.WebApp;
+    if (!tg) return;
 
     const tp = tg.themeParams || {};
     const root = document.documentElement;
@@ -137,7 +163,16 @@ th{
     root.style.setProperty('--tg-button-text', tp.button_text_color || '#ffffff');
     root.style.setProperty('--tg-secondary-bg', tp.secondary_bg_color || '#f4f4f5');
   }
+
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    applyTgTheme();
+    tg.onEvent('themeChanged', applyTgTheme);
+  }
 </script>
+
 
 </head>
 <body>
