@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Расчёт по РД 26-01-90-85 (B по черт.25 от ψ₁)</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+        form { display: grid; gap: 10px; }
+        label { font-weight: bold; }
+        button { padding: 10px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { background: #45a049; }
+        #result { margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #e0e0e0; }
+        .warning { color: red; font-weight: bold; }
+        .error { border: 2px solid red !important; background: #ffecec !important; }
+        small { color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>Расчёт перемешивающего аппарата по РД 26-01-90-85</h1>
+    <p>ψ₁ — ближайшее значение от E<br>B и K₁ — по ψ₁ (без перегородок)<br>При перегородках: v_cp → θ → K₁(θ)</p>
+    
+    <form id="mixerForm" novalidate>
+        <label for="D">1. Диаметр аппарата D (м):</label>
+        <input type="number" id="D" step="0.01" min="0.1" value="2.4" required>
+
+        <label for="H">2. Высота заполнения H (м):</label>
+        <input type="number" id="H" step="0.01" min="0.1" value="2.8" required>
+        
+        <label for="z">3. Число мешалок z (z_m):</label>
+        <input type="number" id="z" step="1" min="1" value="1" required>
+        
+        <label for="type">4. Тип мешалки:</label>
+        <select id="type" required>
+            <option value="03">03 - Турбинная открытая</option>
+            <option value="01">01 - Трёхлопастная</option>
+            <option value="04">04 - Турбинная закрытая</option>
+            <option value="05">05 - Шестилопастная</option>
+            <option value="07">07 - Лопастная</option>
+            <option value="10">10 - Рамная</option>
+            <option value="11">Эмалированная якорна</option>
+            <option value="12">Клетьевая</option>
+            <option value="13">Скребковая</option>
+        </select>
+        
+        <label for="xi">5. Коэффициент сопротивления ζ_m (ξ):</label>
+        <input type="number" id="xi" step="0.1" min="0.1" value="8.4" required>
+        
+        <label for="n">6. Частота вращения n (с⁻¹):</label>
+        <input type="number" id="n" step="0.001" min="0.01" value="2.08" required>
+        
+        <label for="d">7. Диаметр мешалки d (м):</label>
+        <input type="number" id="d" step="0.01" min="0.1" readonly>
+        <small>d = D / Γд — рассчитывается автоматически</small>
+        
+        <label for="gamma_d">Γд = D/d (рекомендуемое значение):</label>
+        <select id="gamma_d" required></select>
+
+        <label for="rho">8. Плотность ρ (кг/м³):</label>
+        <input type="number" id="rho" step="1" min="100" value="1000" required>
+        
+        <label for="nu">9. Кинематическая вязкость ν (м²/с):</label>
+        <input type="number" id="nu" step="0.0000001" min="0.0000001" value="0.000002" required>
+
+        <label for="ro">10. Радиус окружной скорости r (м):</label>
+        <input type="number" id="ro" step="0.01" min="0.02" value="0.02" required>
+        <small>*r — для расчет окр. скорости в заданной точке</small>
+
+        <label for="with_baffles">11. Перегородки:</label>
+        <select id="with_baffles">
+            <option value="false" selected>Нет (l=8)</option>
+            <option value="true">Да (l=4)</option>
+        </select>
+
+        <label for="with_loading">12. Загрузка:</label>
+        <select id="with_loading">
+            <option value="false" selected>Свободная поверхность (с=1)</option>
+            <option value="true">Целиком заполненный (с=2)</option>
+        </select>
+
+        <div id="bafflesParams" style="display:none; margin-top:10px; padding:16px; border:1px dashed #aaa; border-radius:6px; background:#f9f9f9;">
+            <div style="margin-bottom:10px;">
+                <label for="z_p">13. Количество перегородок z_п</label>
+                <input type="number" id="z_p" step="1" min="3" value="4">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label for="b_p">14. Ширина одной перегородки b_п, м</label>
+                <input type="number" id="b_p" step="0.001" min="0.001" value="0.240">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label for="h_p">15. Высота перегородок h_п, м</label>
+                <input type="number" id="h_p" step="0.01" min="0.1" value="2.00">
+            </div>
+        </div>
+        
+        <button type="button" id="calculateMixer">Рассчитать</button>
+    </form>
+    
+    <div id="result"></div>
+
+    <script type="module">
+        
+import { psiTableHigh, psiTableLow, psiTableHigh10, psiTableLow10, psiTableHigh12, psiTableHigh13, 
+    u1Table, u2Table, BTable, K1Table, K1FromThetaTable, K1FromThetaTable20
+} from './data.js'
+
+import { recommendedGammaD } from './const.js'
+
+
+        //Функция отвечает за выбор ближайшего числа из таблицы
+        function getClosestValue(value, table) {
+            if (!table || table.length === 0) return NaN;
+            let closest = table[0][1];
+            let minDiff = Math.abs(value - table[0][0]);
+            for (let i = 1; i < table.length; i++) {
+                const diff = Math.abs(value - table[i][0]);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = table[i][1];
+                }
+            }
+            return closest;
+        }
+        
+        //Функция отвечает за выбор ближайшего числа из таблицы
+        function findClosestKey(target, keys) {
+            let closest = keys[0];
+            let minDiff = Math.abs(target - keys[0]);
+            for (let key of keys) {
+                const diff = Math.abs(target - key);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = key;
+                }
+            }
+            return closest;
+        }
+
+        //Функция отвечает за определение параметра ψ₁ по таблицам
+        function getPsi1(E, Gamma_D, mixerType) {
+                if (E <= 0) return { value: 0.001, usedGamma: '?', note: '' };
+
+                const { table, keys } = getPsiTableForType(mixerType, Gamma_D);
+
+                let note = '';
+                if (Gamma_D > 1.33 && Gamma_D < 1.5) {
+                 note = ` (Γд=${Gamma_D.toFixed(2)} — промежуточное значение, взята ближайшая таблица)`;
+                }
+
+                const closestGamma = findClosestKey(Gamma_D, keys);
+                const points = table[closestGamma];
+
+                if (!points) {
+                     return { value: NaN, usedGamma: 'ошибка', note: 'Нет таблицы для Γд' };
+                }
+
+                const psi = getClosestValue(E, points);
+                return { value: psi, usedGamma: closestGamma, note };
+        }
+
+        //Функция отвечает за определение параметра B по таблицам
+        function getBFromPsi1(psi1) {
+            if (psi1 <= BTable[0][0]) return BTable[0][1];
+            if (psi1 >= BTable[BTable.length - 1][0]) return BTable[BTable.length - 1][1];
+            for (let i = 1; i < BTable.length; i++) {
+                const [x0, y0] = BTable[i - 1];
+                const [x1, y1] = BTable[i];
+                if (psi1 >= x0 && psi1 <= x1) {
+                    return (Math.abs(psi1 - x0) <= Math.abs(psi1 - x1)) ? y0 : y1; // или y1 — выбираем ближайшее, как в твоём стиле
+                }
+            }
+            return BTable[BTable.length - 1][1];
+        }
+        
+        //Функция отвечает за выбор таблицы для нахождения параметра ψ₁
+        function getPsiTableForType(type, Gamma_D) {
+    const t = String(type);           // приводим к строке, чтобы не зависеть от типа входных данных
+
+    // ── типы 10 и 11 ───────────────────────────────────────────────
+    if (t === "10" || t === "11") {
+        if (Gamma_D <= 1.33) {
+            return { table: psiTableLow10, keys: Object.keys(psiTableLow10).map(Number) };
+        }
+        return { table: psiTableHigh10, keys: Object.keys(psiTableHigh10).map(Number) };
+    }
+
+    // ── тип 12 ─────────────────────────────────────────────────────
+    if (t === "12") {
+        if (Gamma_D >= 2.5) {
+            return { table: psiTableHigh12, keys: Object.keys(psiTableHigh12).map(Number) };
+        }
+        throw new Error(
+            `Для type = 12 допустимо только Gamma_D ≥ 2.5 (получено: ${Gamma_D})`
+        );
+    }
+
+    // ── тип 13 ─────────────────────────────────────────────────────
+    if (t === "13") {
+        if (Gamma_D === 1) {
+            return { table: psiTableHigh13, keys: Object.keys(psiTableHigh13).map(Number) };
+        }
+        throw new Error(
+            `Для type = 13 допустимо только Gamma_D = 1 (получено: ${Gamma_D})`
+        );
+    }
+
+    // ── все остальные типы (01, 03, 04, 05, 07 и т.д.) ─────────────
+    if (Gamma_D <= 1.33) {
+        return { table: psiTableLow, keys: Object.keys(psiTableLow).map(Number) };
+    }
+    return { table: psiTableHigh, keys: Object.keys(psiTableHigh).map(Number) };
+}
+       
+        //Функция отвечает за выбор таблицы для нахождения параметра K₁
+        function getK1FromTheta(theta, mixerType) {
+  // Сначала проверяем запрещённый тип
+  if (mixerType === "13") {
+    return {
+      value: NaN,
+      source: "расчёт K₁ для типа скребковая не предусмотрен в этой программе"
+    };
+  }
+
+  const heavyTypes = ["10", "12"];   // или ["10", "11", "12"] — если позже передумаешь
+
+  let table;
+  let sourceBase;
+
+  if (heavyTypes.includes(mixerType)) {
+    table = K1FromThetaTable20;
+    sourceBase = "K₁(θ) — таблица для рамных, клетьевых мешалок";
+  } else {
+    table = K1FromThetaTable;
+    sourceBase = "K₁(θ) — таблица для 01, 03, 04, 05, 07 и т.д.";
+  }
+
+  if (!Array.isArray(table) || table.length === 0) {
+    return {
+      value: NaN,
+      source: `ошибка — таблица не найдена или пуста (${sourceBase})`
+    };
+  }
+
+  const value = getClosestValue(theta, table);
+
+  if (Number.isNaN(value)) {
+    return {
+      value: NaN,
+      source: `ошибка — getClosestValue вернул NaN (${sourceBase})`
+    };
+  }
+
+  return {
+    value,
+    source: sourceBase
+  };
+}
+
+
+        // Показ/скрытие + автозаполнение
+        document.getElementById('with_baffles').addEventListener('change', function() {
+            const div = document.getElementById('bafflesParams');
+            const isBaffles = this.value === 'true';
+            div.style.display = isBaffles ? 'block' : 'none';
+
+            if (isBaffles) {
+                const D = parseFloat(document.getElementById('D').value) || 2.4;
+                const H = parseFloat(document.getElementById('H').value) || 2.8;
+                document.getElementById('z_p').value = 4;
+                document.getElementById('b_p').value = (D * 0.08).toFixed(3);
+                document.getElementById('h_p').value = H.toFixed(2);
+            }
+        });
+
+        document.getElementById('type').addEventListener('change', function() {
+            updateGammaDOptions();
+            const xi = document.getElementById('xi');
+            switch (this.value) {
+                case '01': xi.value = 0.56; break;
+                case '03': xi.value = 8.4;  break;
+                case '04': xi.value = 3.0;  break;
+                case '05': xi.value = 3.0;  break;
+                case '07': xi.value = 0.88; break;
+                case '10': xi.value = 1.28; break;
+                case '11': xi.value = 1.28; break;
+                case '12': xi.value = 23.5; break;
+                case '13': xi.value = 500;  break;
+                default:   xi.value = 5.0;
+            }
+        });
+
+        function updateGammaDOptions() {
+            const type = document.getElementById('type').value;
+            const select = document.getElementById('gamma_d');
+            select.innerHTML = '';
+            const options = recommendedGammaD[type] || [2.0, 2.5, 3.0, 3.5, 4.0];
+            options.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val.toFixed(2);
+                if (Math.abs(val - 3.0) < 0.01) opt.textContent += " (самое частое)";
+                select.appendChild(opt);
+            });
+            updateDiametrMeshalki();
+        }
+
+        function updateDiametrMeshalki() {
+            const D = parseFloat(document.getElementById('D').value) || 2.4;
+            const gamma = parseFloat(document.getElementById('gamma_d').value);
+            if (D && gamma > 0) {
+                document.getElementById('d').value = (D / gamma).toFixed(3);
+            }
+        }
+
+        document.getElementById('gamma_d').addEventListener('change', updateDiametrMeshalki);
+        document.getElementById('D').addEventListener('input', updateDiametrMeshalki);
+
+// Константы
+const G = 9.81;
+const RE_MIN = 1e4;
+const VORTEX_LIMIT = 0.7;
+const VSR_K = 4.35;
+
+// DOM-хелперы
+const $ = (id) => document.getElementById(id);
+const num = (id) => parseFloat($(id).value);
+const int = (id) => parseInt($(id).value, 10);
+
+// Удобный вывод ошибок
+function showWarning(html) {
+  $('result').innerHTML = `<p class="warning">${html}</p>`;
+}
+
+function clearBafflesErrors() {
+  ['z_p','b_p','h_p'].forEach(id => $(id)?.classList.remove('error'));
+}
+
+function validateMainInputs(m) {
+  const required = [m.D, m.H, m.z_m, m.zeta_m, m.n, m.rho, m.nu, m.Gamma_D, m.r];
+  return !required.some(v => Number.isNaN(v));
+}
+
+function readInputs() {
+  return {
+    D: num('D'),
+    H: num('H'),
+    z_m: int('z'),
+    type: String($('type').value),
+    zeta_m: num('xi'),
+    n: num('n'),
+    rho: num('rho'),
+    nu: num('nu'),
+    Gamma_D: num('gamma_d'),
+    with_baffles: $('with_baffles').value === 'true',
+    with_loading: $('with_loading').value === 'true',
+    r: num('ro'),
+    // перегородки (если включены)
+    z_p: num('z_p'),
+    b_p: num('b_p'),
+    h_p: num('h_p'),
+  };
+}
+
+function calcBase(m) {
+  const mu = m.rho * m.nu;
+
+  let Re_c = (m.rho * m.n * (m.D / m.Gamma_D) ** 2) / mu;
+  const Re_note = Re_c > RE_MIN ? '' : '<span class="warning">Re_ц < 10⁴ → подставлено 10⁴</span>';
+  if (Re_c < RE_MIN) Re_c = RE_MIN;
+
+  const ca = m.with_loading ? 2 : 1;
+  const l = m.with_baffles ? 4 : 8;
+  const gamma = l * (m.H / m.D) + ca;
+  const E = gamma / (m.zeta_m * m.z_m * Math.pow(Re_c, 0.25));
+
+  return {Re_c, Re_note, l, gamma, E, ca};
+}
+
+function calcPsi2(Gamma_D, psi1) {
+  if (Gamma_D > 1.5) {
+    return {
+      psi2: -0.5 - 1.25 * psi1,
+      note: '-0.5 - 1.25 × ψ₁ (Γд > 1.5)'
+    };
+  }
+
+  const u1 = getClosestValue(Gamma_D, u1Table);
+  const u2 = getClosestValue(Gamma_D, u2Table);
+
+  if (Gamma_D < 1.33) {
+    return {
+      psi2: -u1 - u2 * psi1,
+      note: `-u₁ - u₂ × ψ₁ (Γд < 1.33, u₁=${u1.toFixed(2)}, u₂=${u2.toFixed(2)})`
+    };
+  }
+
+  return {
+    psi2: -u1 - u2 * psi1,
+    note: `-u₁ - u₂ × ψ₁ (Γд ≈ ${Gamma_D.toFixed(2)}, u₁=${u1.toFixed(2)}, u₂=${u2.toFixed(2)})`
+  };
+}
+
+function calcK1NoBaffles(type, psi1, psi2) {
+  // 01,03,04,05,07 => по таблице; 10,11,12 => (ψ1+ψ2)^2
+  if (["01","03","04","05","07"].includes(type)) {
+    return { K1: getClosestValue(psi1, K1Table), source: "по ψ₁ (таблица)" };
+  }
+  if (["10","11","12"].includes(type)) {
+    return { K1: Math.pow(psi1 + psi2, 2), source: "(ψ₁ + ψ₂)²" };
+  }
+  return { K1: getClosestValue(psi1, K1Table), source: "по ψ₁ (по умолчанию)" };
+}
+
+function calcVofR({ D, Gamma_D, n, r, psi1, psi2 }) {
+  const dM = D / Gamma_D;
+  const rMax = D / 2;
+
+  if (r < 0 || r > rMax) {
+    return { error: `r должно быть в диапазоне 0 … D/2 = ${rMax.toFixed(3)} м` };
+  }
+
+  if (r <= dM / 2) {
+    const x = (2 * r) / dM;
+    const v = 2 * Math.PI * n * r * (psi1 * (x ** 3) + psi2 * (x ** 2) + 1);
+    return { v, note: '0 ≤ r ≤ d/2 (x=2r/d)' };
+  }
+
+  if (Gamma_D >= 1.5) {
+    const v = Math.PI * n * (dM ** 2) * (psi1 + psi2 + 1) / (2 * r);
+    return { v, note: 'd/2 ≤ r ≤ D/2 (Γд ≥ 1.5)' };
+  }
+
+  const v = Math.PI * n * dM * (psi1 + psi2 + 1) * (((D - 2 * r) / (D - dM)) ** (1 / 7));
+  return { v, note: 'd/2 ≤ r ≤ D/2 (Γд < 1.5)' };
+}
+
+function validateBaffles({ D, z_p, b_p, h_p }) {
+  const errors = [];
+  if (Number.isNaN(z_p) || z_p < 3) errors.push('z_p');
+  if (Number.isNaN(b_p) || b_p <= 0) errors.push('b_p');
+  if (Number.isNaN(h_p) || h_p <= 0) errors.push('h_p');
+  if (!Number.isNaN(b_p) && D <= 2 * b_p) errors.push('b_p');
+  return errors;
+}
+
+function calcWithBaffles(m, base) {
+  const errors = validateBaffles(m);
+  if (errors.length) {
+    errors.forEach(id => $(id)?.classList.add('error'));
+    return { error: 'Исправьте выделенные поля перегородок (z_п ≥ 3, b_п > 0, h_п > 0, D > 2·b_п)' };
+  }
+
+  const dM = m.D / m.Gamma_D;
+
+  const v_sr = VSR_K * m.n * dM * ((m.z_m * m.zeta_m) / (m.Gamma_D ** 2 * base.gamma)) ** (1/3);
+
+  const theta = (2 * m.Gamma_D * m.z_p * m.h_p) / (m.zeta_m * m.D * m.z_m) * Math.log(m.D / (m.D - 2 * m.b_p));
+
+  const { value: K1, source: k1Source } = getK1FromTheta(theta, m.type);
+
+  return { v_sr, theta, K1, k1Source };
+}
+
+function renderResult(model) {
+  const {
+    usedMethod, base, extraRows, K1, k1Source, Kn, P
+  } = model;
+
+  $('result').innerHTML = `
+    <h2>Результаты (${usedMethod})</h2>
+    <table>
+      <tr><th>Величина</th><th>Значение</th><th>Примечание</th></tr>
+      <tr><td>Re_ц</td><td>${base.Re_c.toFixed(0)}</td><td>${base.Re_note}</td></tr>
+      <tr><td>γ</td><td>${base.gamma.toFixed(2)}</td><td>${base.l} × (H/D) + ${base.ca}</td></tr>
+      ${model.showE ? `<tr><td>E</td><td>${base.E.toFixed(4)}</td><td>γ / (ζ_m × z_m × Re^{0.25})</td></tr>` : ''}
+      ${extraRows}
+      <tr><td>K₁</td><td>${Number.isFinite(K1) ? K1.toFixed(5) : '—'}</td><td>${k1Source}</td></tr>
+      <tr><td>Kn</td><td>${Kn.toFixed(2)}</td><td>4 × ζ_m × K₁ × z_m</td></tr>
+      <tr><td>P (Вт)</td><td>${P.toFixed(1)}</td><td>Kn × ρ × n³ × d⁵</td></tr>
+    </table>
+    <p><strong>Мощность двигателя (запас 25%):</strong> ${(P * 1.25).toFixed(1)} Вт</p>
+  `;
+}
+
+
+function calculateMixer() {
+  clearBafflesErrors();
+
+  const m = readInputs();
+
+  if (!validateMainInputs(m)) {
+    showWarning('Заполните все основные поля корректно.');
+    return;
+  }
+
+  const base = calcBase(m);
+
+  // общие для обеих веток
+  const dM = m.D / m.Gamma_D;
+
+  if (!m.with_baffles) {
+    // ── БЕЗ ПЕРЕГОРОДОК ──────────────────────────────────────────
+    const psi1Result = getPsi1(base.E, m.Gamma_D, m.type);
+    if (Number.isNaN(psi1Result.value)) {
+      showWarning(`Не удалось определить ψ₁ для Γд = ${m.Gamma_D.toFixed(2)}`);
+      return;
+    }
+
+    const psi1 = psi1Result.value;
+    const extraNote = psi1Result.note || '';
+
+    const B = getBFromPsi1(psi1);
+
+    const { psi2, note: psi2_note } = calcPsi2(m.Gamma_D, psi1);
+
+    const { K1, source: k1Source } = calcK1NoBaffles(m.type, psi1, psi2);
+
+    const h_v = B * (m.n ** 2 * dM ** 2) / (2 * G);
+    const vortex_note = h_v < VORTEX_LIMIT * m.H ? 'Приемлемо' : '<span class="warning">Слишком большая воронка</span>';
+
+    const vRes = calcVofR({ D: m.D, Gamma_D: m.Gamma_D, n: m.n, r: m.r, psi1, psi2 });
+    if (vRes.error) {
+      showWarning(vRes.error);
+      return;
+    }
+
+    const Kn = 4 * m.zeta_m * K1 * m.z_m;
+    const P = Kn * m.rho * (m.n ** 3) * (dM ** 5);
+
+    const extraRows = `
+      <tr><td>ψ₁</td><td>${psi1.toFixed(3)}${extraNote}</td><td>по E при Γд ≈ ${psi1Result.usedGamma}</td></tr>
+      <tr><td>ψ₂</td><td>${psi2.toFixed(3)}</td><td>${psi2_note}</td></tr>
+      <tr><td>v(r) (м/с)</td><td>${vRes.v.toFixed(3)}</td><td>${vRes.note}</td></tr>
+      <tr><td>B</td><td>${B.toFixed(2)}</td><td>по ψ₁</td></tr>
+      <tr><td>hв (м)</td><td>${h_v.toFixed(3)}</td><td>${vortex_note}</td></tr>
+    `;
+
+    renderResult({
+      usedMethod: 'без перегородок',
+      base,
+      showE: true,
+      extraRows,
+      K1,
+      k1Source,
+      Kn,
+      P,
+    });
+
+    return;
+  }
+
+  // ── С ПЕРЕГОРОДКАМИ ─────────────────────────────────────────────
+  const bRes = calcWithBaffles(m, base);
+  if (bRes.error) {
+    showWarning(bRes.error);
+    return;
+  }
+
+  const K1 = bRes.K1;
+  const Kn = 4 * m.zeta_m * K1 * m.z_m;
+  const P = Kn * m.rho * (m.n ** 3) * (dM ** 5);
+
+  const extraRows = `
+    <tr><td>v_cp (м/с)</td><td>${bRes.v_sr.toFixed(3)}</td><td>осреднённая скорость потока</td></tr>
+    <tr><td>θ</td><td>${bRes.theta.toFixed(4)}</td><td>параметр сопротивления перегородок</td></tr>
+  `;
+
+  renderResult({
+    usedMethod: 'с перегородками',
+    base,
+    showE: false,
+    extraRows,
+    K1,
+    k1Source: bRes.k1Source,
+    Kn,
+    P,
+  });
+}
+        // Инициализация при загрузке
+        window.addEventListener('load', () => {
+            updateGammaDOptions();
+        });
+        document.getElementById('calculateMixer').addEventListener('click', calculateMixer);
+    </script>
+</body>
+</html>
