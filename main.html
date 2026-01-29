@@ -187,16 +187,28 @@ th{
 
 <!--<Скрипт закрытия клавиатуры>--> 
 <script>
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const el = document.activeElement;
-    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-      el.blur(); // закрывает клавиатуру
-      e.preventDefault(); // чтобы форма не сабмитилась
-    }
+function closeKb(el){
+  el.blur();
+  window.scrollTo(0, 0);
+}
+
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+
+    // iOS Telegram вместо keydown
+    el.addEventListener('beforeinput', ev => {
+      if (ev.inputType === 'insertLineBreak') {
+        ev.preventDefault();
+        closeKb(el);
+      }
+    });
+
+    el.addEventListener('change', () => closeKb(el));
   }
 });
 </script>
+
 
 <body>
     <h1>Расчёт перемешивающего аппарата по РД 26-01-90-85</h1>
